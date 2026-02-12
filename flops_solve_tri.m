@@ -1,4 +1,4 @@
-function f = flops_solve_tri(n,m,k)
+function f = flops_solve_tri(n,m,k,mode)
 % FLOPS_SOLVE_TRI   Flops for triangular left division.
 % FLOPS_SOLVE_TRI(T,b) returns the number of flops for solve_tri(T,b).
 % FLOPS_SOLVE_TRI(n,m,k) returns the number of flops for 
@@ -10,10 +10,14 @@ function f = flops_solve_tri(n,m,k)
 %  h = (f - b*g)/c
 %  which is 2 multiply+add and 2 divisions = 18 flops.
 
+if nargin < 4
+	mode = "real";
+end
+
 if nargin == 2
 	T = n;
 	b = m;
-  f = flops_solve_tri(rows(T),cols(T),cols(b));
+  f = flops_solve_tri(rows(T),cols(T),cols(b),mode);
   return;
 end
 if n ~= m
@@ -23,4 +27,14 @@ end
 % number of multiplies+adds is
 % sum(i=1..n) sum(k=1..i-1) 2 = sum(i=1..n) 2*(i-1) = n^2-n
 % number of divides is n
-f = (n*n + n*(flops_div-1))*k;
+%f = (n*n + n*(flops_div-1))*k;
+f = 0;
+for i = 1:n
+	if mode == "real"
+		f = f + (2*(i-1) + flops_div)*k;
+	elseif mode == "complex"
+		f = f + (8*(i-1) + flops_complexdiv)*k;
+	else
+		error('Invalid mode specified. Use "real" or "complex".');
+	end
+end

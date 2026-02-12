@@ -1,12 +1,16 @@
-function f = flops_solve(n,m,c)
+function f = flops_solve(n,m,c,mode)
 % FLOPS_SOLVE    Flops for matrix left division.
 % FLOPS_SOLVE(a,b) returns the number of flops for a\b.
 % FLOPS_SOLVE(n,m,c) returns the number of flops for rand(n,m)\rand(m,c).
 
+if nargin < 4
+	mode = "real";
+end
+
 if nargin == 2
 	a = n;
 	b = m;
-  f = flops_solve(rows(a),cols(a),cols(b));
+  f = flops_solve(rows(a),cols(a),cols(b), mode);
   return;
 end
 if n == m
@@ -15,16 +19,23 @@ if n == m
     f = c*flops_div;
   elseif 0
 		% invert using cholesky (see inv_posdef)
-		f = flops_chol(n) + 2*flops_solve_tri(n,m,c);
+		f = flops_chol(n) + 2*flops_solve_tri(n,m,c,mode);
 	else
 		% invert using LU decomposition
 		% L has unit diagonal so no divisions are needed when back-substituting L
-		f = flops_lu(n) + 2*flops_solve_tri(n,m,c) - n*c*flops_div;
+    if mode == "real"
+      add_div = n*c*flops_div;
+    elseif mode == "complex"
+      add_div = n*c*flops_complexdiv;
+    else
+      error('Invalid mode specified. Use "real" or "complex".');
+    end
+		f = flops_lu(n,mode) + 2*flops_solve_tri(n,m,c,mode) - add_div;
   end
 elseif n > m
   % this comes from Ax=b, x = (A'*A)\(A'*b)
-  f = flops_mul(m,n,m) + flops_mul(m,n,c) + flops_solve(m,m,c);
+  f = flops_mul(m,n,m,mode) + flops_mul(m,n,c,mode) + flops_solve(m,m,c,mode);
 else
   % this comes from Ax=b, x = A'*(A*A')\b
-  f = flops_mul(n,m,n) + flops_mul(m,n,c) + flops_solve(n,n,c);
+  f = flops_mul(n,m,n,mode) + flops_mul(m,n,c,mode) + flops_solve(n,n,c,mode);
 end
